@@ -14,7 +14,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 	if apiKey == "" {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "Server error",
+			Body:       "Server error. Bad config",
 		}, nil
 	}
 
