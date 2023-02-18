@@ -14,7 +14,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 }
 
 func main() {
-	chatgpt.GetTextCompletion("foo")
+	chatgpt.GetTextCompletion("apiKey", "foo")
 	// Make the handler available for Remote Procedure Call
 	lambda.Start(handler)
 }
