@@ -27,10 +27,8 @@ type TextCompletionResponse struct {
 }
 
 func TextCompletion(apiKey string, input string) (TextCompletionResponse, error) {
-	fmt.Println("GetTextCompletion called")
-
 	url := "https://api.openai.com/v1/completions"
-	data := TextCompletionBody{"text-davinci-003", input, 1000, 0}
+	data := TextCompletionBody{"text-davinci-003", input, 2000, 0}
 	m, err := json.Marshal(data)
 	b := bytes.NewBuffer(m)
 	d1 := TextCompletionResponse{}
@@ -64,6 +62,8 @@ func TextCompletion(apiKey string, input string) (TextCompletionResponse, error)
 }
 
 func ProductRecommendationsQuery(initialQuery string, initialResponse string) string {
+	fmt.Println("initialResponse")
+	fmt.Println(initialResponse)
 	return "\ncontext:\n" +
 		initialQuery + "\n" +
 		initialResponse + "\n\n" +
@@ -75,3 +75,5 @@ func ProductRecommendationsQuery(initialQuery string, initialResponse string) st
 		" key: isProduct, value: true if the link refers to a product, false if it refers to a service" +
 		" key: characterRange, value: an array of JSON objects. The JSON objects should include a key called startChar and endChar for where the product or service appears in my query"
 }
+
+// TODO: entity extraction -> to feed

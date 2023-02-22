@@ -40,9 +40,15 @@ func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResp
 }
 
 func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxyResponse, error) {
+	headers := make(map[string]string)
+	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Headers"] = "Content-Type"
+	headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE"
+
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
+			Headers:    headers,
 			Body:       "Server error (upstream)",
 		}, nil
 	}
@@ -52,12 +58,14 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
+			Headers:    headers,
 			Body:       "Marshal error",
 		}, nil
 	}
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: 200,
+		Headers:    headers,
 		Body:       string(b),
 	}, nil
 }
@@ -85,7 +93,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		return handleUpstreamResponse(res, err)
 	}
 
-	if strings.Contains(request.Path, "/product_recommendations") {
+	if strings.Contains(request.Path, "/product_recommendation") {
 		args := ProductRecommendationsBody{}
 		json.Unmarshal([]byte(request.Body), &args)
 		qReq, e := requiredValue(args.Query_request, true)
@@ -96,7 +104,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		query := chatgpt.ProductRecommendationsQuery(qRes, qReq)
+		query := chatgpt.ProductRecommendationsQuery(qReq, qRes)
 		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
 		return handleUpstreamResponse(res, err)
 	}
