@@ -13,6 +13,12 @@ import (
 	"github.com/kunal-mandalia/product-gpt-api/search"
 )
 
+// request structs
+type ProductRecommendationsBody struct {
+	Query_request  string `json:"query_request"`
+	Query_response string `json:"query_response"`
+}
+
 func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResponse) {
 	if s == "" {
 		statusCode := 0
@@ -58,6 +64,8 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 
 // expose textcompletion and search endpoints
 func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+	fmt.Println(request)
+
 	// check api keys are loaded
 	chatGPTApiKey, e := requiredValue(os.Getenv("CHATGPT_API_KEY"), false)
 	if e != nil {
@@ -74,6 +82,22 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 			return e, nil
 		}
 		res, err := chatgpt.TextCompletion(chatGPTApiKey, q)
+		return handleUpstreamResponse(res, err)
+	}
+
+	if strings.Contains(request.Path, "/product_recommendations") {
+		args := ProductRecommendationsBody{}
+		json.Unmarshal([]byte(request.Body), &args)
+		qReq, e := requiredValue(args.Query_request, true)
+		if e != nil {
+			return e, nil
+		}
+		qRes, e := requiredValue(args.Query_response, true)
+		if e != nil {
+			return e, nil
+		}
+		query := chatgpt.ProductRecommendationsQuery(qRes, qReq)
+		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
 		return handleUpstreamResponse(res, err)
 	}
 

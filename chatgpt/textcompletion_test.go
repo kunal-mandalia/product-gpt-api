@@ -12,10 +12,11 @@ func Test_ProductRecommendationsQuery(t *testing.T) {
 				"The square root of 9 is 3\n\n" +
 				"prompt:\n" +
 				"Identify and provide information on products and services found within the context above." +
-				" Specifically, output a table with three columns." +
-				" The first column the will be the name of the product / service," +
-				" the second column a link to that product / service," +
-				" and the third column character ranges where the product / service appears in my query.",
+				" Specifically, output an array of JSON objects which include the following:" +
+				" key: name, value: name of product or service" +
+				" key: link, value: a link to that product or service," +
+				" key: isProduct, value: true if the link refers to a product, false if it refers to a service" +
+				" key: characterRange, value: an array of JSON objects. The JSON objects should include a key called startChar and endChar for where the product or service appears in my query",
 		},
 	}
 
