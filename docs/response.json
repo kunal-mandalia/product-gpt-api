@@ -1,0 +1,19 @@
+{
+    "id": "cmpl-6lesWdR193cvsak3iiAidolNM9xHk",
+    "object": "text_completion",
+    "created": 1676816572,
+    "model": "text-davinci-003",
+    "choices": [
+        {
+            "text": "\n\nThe Poincaré conjecture was solved by Grigori Pere",
+            "index": 0,
+            "logprobs": null,
+            "finish_reason": "length"
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 8,
+        "completion_tokens": 15,
+        "total_tokens": 23
+    }
+}

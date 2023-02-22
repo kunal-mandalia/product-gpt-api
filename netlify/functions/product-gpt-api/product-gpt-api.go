@@ -1,42 +1,94 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/joho/godotenv"
 	"github.com/kunal-mandalia/product-gpt-api/chatgpt"
+	"github.com/kunal-mandalia/product-gpt-api/search"
 )
 
-func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	apiKey := os.Getenv("CHATGPT_API_KEY")
-	if apiKey == "" {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Server error. Bad config",
-		}, nil
+func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResponse) {
+	if s == "" {
+		statusCode := 0
+		body := ""
+		if fromUser {
+			statusCode = 400
+			body = "Bad request (incomplete, missing value)"
+		} else {
+			statusCode = 500
+			body = "Server error (config)"
+		}
+		fmt.Println(statusCode, body)
+		return "", &events.APIGatewayProxyResponse{
+			StatusCode: statusCode,
+			Body:       body,
+		}
 	}
+	return s, nil
+}
 
-	q := request.QueryStringParameters["q"]
-	if q == "" {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Missing query",
-		}, nil
-	}
-
-	res, err := chatgpt.GetTextCompletion(apiKey, q)
+func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxyResponse, error) {
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
-			Body:       "",
+			Body:       "Server error (upstream)",
+		}, nil
+	}
+
+	// send string
+	b, err := json.Marshal(res)
+	if err != nil {
+		return &events.APIGatewayProxyResponse{
+			StatusCode: 500,
+			Body:       "Marshal error",
 		}, nil
 	}
 
 	return &events.APIGatewayProxyResponse{
 		StatusCode: 200,
-		Body:       res,
+		Body:       string(b),
+	}, nil
+}
+
+// expose textcompletion and search endpoints
+func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+	// check api keys are loaded
+	chatGPTApiKey, e := requiredValue(os.Getenv("CHATGPT_API_KEY"), false)
+	if e != nil {
+		return e, nil
+	}
+	searchApiKey, e := requiredValue(os.Getenv("CUSTOMSEARCH_API_KEY"), false)
+	if e != nil {
+		return e, nil
+	}
+
+	if strings.Contains(request.Path, "/textcompletion") {
+		q, e := requiredValue(request.QueryStringParameters["q"], true)
+		if e != nil {
+			return e, nil
+		}
+		res, err := chatgpt.TextCompletion(chatGPTApiKey, q)
+		return handleUpstreamResponse(res, err)
+	}
+
+	if strings.Contains(request.Path, "/search") {
+		q, e := requiredValue(request.QueryStringParameters["q"], true)
+		if e != nil {
+			return e, nil
+		}
+		res, err := search.ProductList(searchApiKey, q)
+		return handleUpstreamResponse(res, err)
+	}
+
+	return &events.APIGatewayProxyResponse{
+		StatusCode: 400,
+		Body:       "Bad query",
 	}, nil
 }
 

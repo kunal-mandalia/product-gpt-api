@@ -3,23 +3,11 @@ package chatgpt
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 )
-
-func UNUSED(x ...interface{}) {}
-
-// curl https://api.openai.com/v1/completions \
-//   -H 'Content-Type: application/json' \
-//   -H 'Authorization: Bearer YOUR_API_KEY' \
-//   -d '{
-//   "model": "text-davinci-003",
-//   "prompt": "Say this is a test",
-//   "max_tokens": 7,
-//   "temperature": 0
-// }'
 
 type TextCompletionBody struct {
 	Model       string `json:"model"`
@@ -28,21 +16,33 @@ type TextCompletionBody struct {
 	Temperature int    `json:"temperature"`
 }
 
-func GetTextCompletion(apiKey string, input string) (string, error) {
+type TextCompletionChoice struct {
+	Text          string `json:"text"`
+	Finish_reason string `json:"finish_reason"`
+}
+
+type TextCompletionResponse struct {
+	Id      string                 `json:"id"`
+	Choices []TextCompletionChoice `json:"choices"`
+}
+
+func TextCompletion(apiKey string, input string) (TextCompletionResponse, error) {
 	fmt.Println("GetTextCompletion called")
 
 	url := "https://api.openai.com/v1/completions"
-	data := TextCompletionBody{"text-davinci-003", input, 15, 0}
+	data := TextCompletionBody{"text-davinci-003", input, 200, 0}
 	m, err := json.Marshal(data)
 	b := bytes.NewBuffer(m)
+	d1 := TextCompletionResponse{}
+
 	if err != nil {
-		return "", err
+		return d1, err
 	}
 
 	r, err := http.NewRequest("POST", url, b)
 	if err != nil {
 		log.Fatal(err)
-		return "", err
+		return d1, err
 	}
 
 	r.Header.Add("Content-Type", "application/json")
@@ -51,15 +51,26 @@ func GetTextCompletion(apiKey string, input string) (string, error) {
 	client := &http.Client{}
 	res, err := client.Do(r)
 	if err != nil {
-		return "", err
+		return d1, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return d1, errors.New("upstream error")
 	}
 
 	defer res.Body.Close()
 
-	bytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	str := string(bytes)
-	return str, nil
+	json.NewDecoder(res.Body).Decode(&d1)
+	return d1, nil
+}
+
+func ProductRecommendationsQuery(initialQuery string, initialResponse string) string {
+	return "\ncontext:\n" +
+		initialQuery + "\n" +
+		initialResponse + "\n\n" +
+		"prompt:\n" +
+		"Identify and provide information on products and services found within the context above." +
+		" Specifically, output a table with three columns." +
+		" The first column the will be the name of the product / service," +
+		" the second column a link to that product / service," +
+		" and the third column character ranges where the product / service appears in my query."
 }
