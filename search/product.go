@@ -3,7 +3,6 @@ package search
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,7 +18,6 @@ type CustomSearchResponse struct {
 }
 
 func ProductList(apiKey string, q string) (CustomSearchResponse, error) {
-	fmt.Println("ProductList called")
 	data := CustomSearchResponse{}
 
 	URLString := "https://customsearch.googleapis.com/customsearch/v1?" +

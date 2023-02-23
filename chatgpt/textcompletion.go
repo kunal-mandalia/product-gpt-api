@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -62,8 +61,6 @@ func TextCompletion(apiKey string, input string) (TextCompletionResponse, error)
 }
 
 func ProductRecommendationsQuery(initialQuery string, initialResponse string) string {
-	fmt.Println("initialResponse")
-	fmt.Println(initialResponse)
 	return "\ncontext:\n" +
 		initialQuery + "\n" +
 		initialResponse + "\n\n" +
@@ -73,7 +70,17 @@ func ProductRecommendationsQuery(initialQuery string, initialResponse string) st
 		" key: name, value: name of product or service" +
 		" key: link, value: a link to that product or service," +
 		" key: isProduct, value: true if the link refers to a product, false if it refers to a service" +
-		" key: characterRange, value: an array of JSON objects. The JSON objects should include a key called startChar and endChar for where the product or service appears in my query"
+		" key: characterRange, value: an array of start / end numbers indicating "
 }
 
-// TODO: entity extraction -> to feed
+func EntityExtractionQuery(q string) string {
+	return "I want you to identify and classify entities in the following passage of text until I state END_OF_PASSAGE :\n" +
+		q + "END_OF_PASSAGE" +
+		"\nReturn a table with the following columns:" +
+		" The 1st is the entity name." +
+		" The 2nd column is the entity type." +
+		" The 3rd column shows if the entity is saleable or not." +
+		" The 4th column is the category of the entity" +
+		" The 5th column is the entity type" +
+		" The 6th column is either Product, Service, or Other depending on the entity type"
+}

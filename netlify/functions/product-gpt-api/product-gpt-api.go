@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
@@ -30,7 +29,6 @@ func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResp
 			statusCode = 500
 			body = "Server error (config)"
 		}
-		fmt.Println(statusCode, body)
 		return "", &events.APIGatewayProxyResponse{
 			StatusCode: statusCode,
 			Body:       body,
@@ -72,8 +70,6 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 
 // expose textcompletion and search endpoints
 func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	fmt.Println(request)
-
 	// check api keys are loaded
 	chatGPTApiKey, e := requiredValue(os.Getenv("CHATGPT_API_KEY"), false)
 	if e != nil {
@@ -105,6 +101,18 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 			return e, nil
 		}
 		query := chatgpt.ProductRecommendationsQuery(qReq, qRes)
+		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
+		return handleUpstreamResponse(res, err)
+	}
+
+	if strings.Contains(request.Path, "/entities") {
+		args := ProductRecommendationsBody{}
+		json.Unmarshal([]byte(request.Body), &args)
+		qReq, e := requiredValue(args.Query_request, true)
+		if e != nil {
+			return e, nil
+		}
+		query := chatgpt.EntityExtractionQuery(qReq)
 		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
 		return handleUpstreamResponse(res, err)
 	}
