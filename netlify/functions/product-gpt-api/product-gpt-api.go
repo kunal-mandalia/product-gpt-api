@@ -126,6 +126,17 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		return handleUpstreamResponse(res, err)
 	}
 
+	if strings.Contains(request.Path, "/ebay_search") {
+		q, e := requiredValue(request.QueryStringParameters["q"], true)
+		if e != nil {
+			return e, nil
+		}
+		// TODO: cache
+		t, _ := search.EbayGetAccessToken()
+		res, err := search.EbaySearch(q, t.AccessToken)
+		return handleUpstreamResponse(res, err)
+	}
+
 	return &events.APIGatewayProxyResponse{
 		StatusCode: 400,
 		Body:       "Bad query",
