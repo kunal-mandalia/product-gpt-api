@@ -23,8 +23,6 @@ func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	clientId := os.Getenv("EBAY_CLIENT_ID")
 	clientSecret := os.Getenv("EBAY_CLIENT_SECRET")
 
-	fmt.Println("env vars:", tokenEndpoint, clientId, clientSecret)
-
 	token := EbayAccessTokenResponse{}
 
 	data := url.Values{}
