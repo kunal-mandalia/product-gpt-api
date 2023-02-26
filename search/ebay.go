@@ -23,6 +23,8 @@ func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	clientId := os.Getenv("EBAY_CLIENT_ID")
 	clientSecret := os.Getenv("EBAY_CLIENT_SECRET")
 
+	fmt.Println("env vars:", tokenEndpoint, clientId, clientSecret)
+
 	token := EbayAccessTokenResponse{}
 
 	data := url.Values{}
@@ -52,7 +54,7 @@ func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	return token, nil
 }
 
-func EbaySearch(q string, accessToken string) (interface{}, error) {
+func EbaySearch(q string, marketplaceId string, accessToken string) (EbaySearchResponse, error) {
 	data := EbaySearchResponse{}
 	apiEndpoint := os.Getenv("EBAY_BROWSE_API_ENDPOINT")
 	URLString := apiEndpoint + "/item_summary/search?limit=3&q=" + url.QueryEscape(q)
@@ -60,21 +62,22 @@ func EbaySearch(q string, accessToken string) (interface{}, error) {
 	r, _ := http.NewRequest("GET", URLString, nil)
 	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("Authorization", "Bearer "+accessToken)
+	r.Header.Add("X-EBAY-C-MARKETPLACE-ID", marketplaceId)
+
 	client := &http.Client{}
 	res, err := client.Do(r)
 	if err != nil {
 		bodyBytes, _ := io.ReadAll(res.Body)
 		fmt.Println(string(bodyBytes))
-		return nil, err
+		return data, err
 	}
 	if res.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(res.Body)
 		fmt.Println(string(bodyBytes))
-		return nil, errors.New("upstream error")
+		return data, errors.New("upstream error")
 	}
 	defer res.Body.Close()
 
 	json.NewDecoder(res.Body).Decode(&data)
-	fmt.Println(data)
 	return data, nil
 }
