@@ -131,9 +131,13 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		// TODO: cache
+		m, e := requiredValue(request.QueryStringParameters["marketplace"], true)
+		if e != nil {
+			return e, nil
+		}
+		// TODO: cache token
 		t, _ := search.EbayGetAccessToken()
-		res, err := search.EbaySearch(q, t.AccessToken)
+		res, err := search.EbaySearch(q, m, t.AccessToken)
 		return handleUpstreamResponse(res, err)
 	}
 
