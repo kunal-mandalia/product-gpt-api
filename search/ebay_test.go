@@ -2,11 +2,23 @@ package search
 
 import (
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
-func Test_GetAccessToken(t *testing.T) {
+func setup() {
+	godotenv.Load()
+}
 
+func TestMain(m *testing.M) {
+	setup()
+	code := m.Run()
+	os.Exit(code)
+}
+
+func Test_GetAccessToken(t *testing.T) {
 	actual, _ := EbayGetAccessToken()
 
 	expected := EbayAccessTokenResponse{}
@@ -14,17 +26,17 @@ func Test_GetAccessToken(t *testing.T) {
 
 	fmt.Println(actual)
 	if actual.TokenType != expected.TokenType {
-		t.Fatalf(`GetAccessToken() failed`)
+		t.Fatalf(`EbayGetAccessToken() failed`)
 	}
 }
 
 func Test_EbaySearch(t *testing.T) {
 	q := "cake"
-	expected := "bar"
+	expected := 3
 	token, _ := EbayGetAccessToken()
-	actual, _ := EbaySearch(q, token.AccessToken)
+	actual, _ := EbaySearch(q, "EBAY_GB", token.AccessToken)
 
-	if actual != expected {
+	if len(actual.ItemSummaries) != expected {
 		t.Fatalf(`Search(%s) failed`, q)
 	}
 }
