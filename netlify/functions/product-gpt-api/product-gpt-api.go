@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -131,13 +132,19 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		m, e := requiredValue(request.QueryStringParameters["marketplace"], true)
+		marketPlace, e := requiredValue(request.QueryStringParameters["marketplace"], true)
 		if e != nil {
 			return e, nil
 		}
+		limit, e := requiredValue(request.QueryStringParameters["limit"], true)
+		if e != nil {
+			return e, nil
+		}
+		nLimit, _ := strconv.Atoi(limit)
+
 		// TODO: cache token
 		t, _ := search.EbayGetAccessToken()
-		res, err := search.EbaySearch(q, m, t.AccessToken)
+		res, err := search.EbaySearch(q, marketPlace, nLimit, t.AccessToken)
 		return handleUpstreamResponse(res, err)
 	}
 
