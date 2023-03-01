@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -17,6 +18,10 @@ type EbayAccessTokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 	TokenType   string `json:"token_type"`
 }
+
+const (
+	MAX_SEARCH_ITEMS = 20
+)
 
 func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	tokenEndpoint := os.Getenv("EBAY_TOKEN_ENDPOINT")
@@ -52,10 +57,16 @@ func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	return token, nil
 }
 
-func EbaySearch(q string, marketplaceId string, accessToken string) (EbaySearchResponse, error) {
+func EbaySearch(q string, marketplaceId string, limit int, accessToken string) (EbaySearchResponse, error) {
 	data := EbaySearchResponse{}
 	apiEndpoint := os.Getenv("EBAY_BROWSE_API_ENDPOINT")
-	URLString := apiEndpoint + "/item_summary/search?limit=3&q=" + url.QueryEscape(q)
+	qLimit := limit
+	if qLimit > MAX_SEARCH_ITEMS {
+		qLimit = MAX_SEARCH_ITEMS
+	}
+	URLString := apiEndpoint + "/item_summary/search?" +
+		"limit=" + strconv.Itoa(qLimit) +
+		"&q=" + url.QueryEscape(q)
 
 	r, _ := http.NewRequest("GET", URLString, nil)
 	r.Header.Add("Content-Type", "application/json")

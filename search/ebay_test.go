@@ -34,7 +34,7 @@ func Test_EbaySearch(t *testing.T) {
 	q := "cake"
 	expected := 3
 	token, _ := EbayGetAccessToken()
-	actual, _ := EbaySearch(q, "EBAY_GB", token.AccessToken)
+	actual, _ := EbaySearch(q, "EBAY_GB", 10, token.AccessToken)
 
 	if len(actual.ItemSummaries) != expected {
 		t.Fatalf(`Search(%s) failed`, q)
