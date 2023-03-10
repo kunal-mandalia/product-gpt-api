@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -39,8 +40,14 @@ func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResp
 }
 
 func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxyResponse, error) {
+	allowedOrigin, e := requiredValue(os.Getenv("ALLOWED_ORIGIN"), false)
+	fmt.Println("allowed origin", allowedOrigin)
+	if e != nil {
+		return e, nil
+	}
+
 	headers := make(map[string]string)
-	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Origin"] = allowedOrigin
 	headers["Access-Control-Allow-Headers"] = "Content-Type"
 	headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE"
 
@@ -52,7 +59,6 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 		}, nil
 	}
 
-	// send string
 	b, err := json.Marshal(res)
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
