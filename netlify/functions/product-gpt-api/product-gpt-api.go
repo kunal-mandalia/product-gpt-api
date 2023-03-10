@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/joho/godotenv"
-	"github.com/kunal-mandalia/product-gpt-api/chatgpt"
+	"github.com/kunal-mandalia/product-gpt-api/openai"
 	"github.com/kunal-mandalia/product-gpt-api/search"
 )
 
@@ -49,7 +49,7 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 	headers := make(map[string]string)
 	headers["Access-Control-Allow-Origin"] = allowedOrigin
 	headers["Access-Control-Allow-Headers"] = "Content-Type"
-	headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE"
+	headers["Access-Control-Allow-Methods"] = "GET, POST"
 
 	if err != nil {
 		return &events.APIGatewayProxyResponse{
@@ -78,7 +78,7 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 // expose textcompletion and search endpoints
 func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	// check api keys are loaded
-	chatGPTApiKey, e := requiredValue(os.Getenv("CHATGPT_API_KEY"), false)
+	openAIApiKey, e := requiredValue(os.Getenv("OPENAI_API_KEY"), false)
 	if e != nil {
 		return e, nil
 	}
@@ -92,7 +92,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		res, err := chatgpt.TextCompletion(chatGPTApiKey, q)
+		res, err := openai.TextCompletion(openAIApiKey, q)
 		return handleUpstreamResponse(res, err)
 	}
 
@@ -107,8 +107,8 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		query := chatgpt.ProductRecommendationsQuery(qReq, qRes)
-		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
+		query := openai.ProductRecommendationsQuery(qReq, qRes)
+		res, err := openai.TextCompletion(openAIApiKey, query)
 		return handleUpstreamResponse(res, err)
 	}
 
@@ -119,8 +119,8 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		if e != nil {
 			return e, nil
 		}
-		query := chatgpt.EntityExtractionQuery(qReq)
-		res, err := chatgpt.TextCompletion(chatGPTApiKey, query)
+		query := openai.EntityExtractionQuery(qReq)
+		res, err := openai.TextCompletion(openAIApiKey, query)
 		return handleUpstreamResponse(res, err)
 	}
 
