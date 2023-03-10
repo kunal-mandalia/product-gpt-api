@@ -86,6 +86,10 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 	if e != nil {
 		return e, nil
 	}
+	ebayCampaignId, e := requiredValue(os.Getenv("EBAY_CAMPAIGN_ID"), false)
+	if e != nil {
+		return e, nil
+	}
 
 	if strings.Contains(request.Path, "/textcompletion") {
 		q, e := requiredValue(request.QueryStringParameters["q"], true)
@@ -150,7 +154,7 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 
 		// TODO: cache token
 		t, _ := search.EbayGetAccessToken()
-		res, err := search.EbaySearch(q, marketPlace, nLimit, t.AccessToken)
+		res, err := search.EbaySearch(q, marketPlace, nLimit, t.AccessToken, ebayCampaignId)
 		return handleUpstreamResponse(res, err)
 	}
 

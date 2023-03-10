@@ -57,7 +57,7 @@ func EbayGetAccessToken() (EbayAccessTokenResponse, error) {
 	return token, nil
 }
 
-func EbaySearch(q string, marketplaceId string, limit int, accessToken string) (EbaySearchResponse, error) {
+func EbaySearch(q string, marketplaceId string, limit int, accessToken string, affiliateCampaignId string) (EbaySearchResponse, error) {
 	data := EbaySearchResponse{}
 	apiEndpoint := os.Getenv("EBAY_BROWSE_API_ENDPOINT")
 	qLimit := limit
@@ -72,6 +72,7 @@ func EbaySearch(q string, marketplaceId string, limit int, accessToken string) (
 	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("Authorization", "Bearer "+accessToken)
 	r.Header.Add("X-EBAY-C-MARKETPLACE-ID", marketplaceId)
+	r.Header.Add("X-EBAY-C-ENDUSERCTX", "affiliateCampaignId="+affiliateCampaignId)
 
 	client := &http.Client{}
 	res, err := client.Do(r)
