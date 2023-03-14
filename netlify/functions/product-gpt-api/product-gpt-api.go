@@ -2,13 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/getsentry/sentry-go"
 	"github.com/joho/godotenv"
 	"github.com/kunal-mandalia/product-gpt-api/openai"
 	"github.com/kunal-mandalia/product-gpt-api/search"
@@ -43,6 +46,7 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 	allowedOrigin, e := requiredValue(os.Getenv("ALLOWED_ORIGIN"), false)
 	fmt.Println("allowed origin", allowedOrigin)
 	if e != nil {
+		sentry.CaptureException(errors.New("missing env allowed origin"))
 		return e, nil
 	}
 
@@ -52,6 +56,7 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 	headers["Access-Control-Allow-Methods"] = "GET, POST"
 
 	if err != nil {
+		sentry.CaptureException(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
@@ -61,6 +66,7 @@ func handleUpstreamResponse(res interface{}, err error) (*events.APIGatewayProxy
 
 	b, err := json.Marshal(res)
 	if err != nil {
+		sentry.CaptureException(err)
 		return &events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Headers:    headers,
@@ -92,15 +98,20 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 	}
 
 	if strings.Contains(request.Path, "/textcompletion") {
+		sentry.CaptureMessage("api_hit: /textcompletion/q=" + request.QueryStringParameters["q"])
 		q, e := requiredValue(request.QueryStringParameters["q"], true)
 		if e != nil {
 			return e, nil
 		}
 		res, err := openai.TextCompletion(openAIApiKey, q)
+		if err != nil {
+			sentry.CaptureException(err)
+		}
 		return handleUpstreamResponse(res, err)
 	}
 
 	if strings.Contains(request.Path, "/product_recommendation") {
+		sentry.CaptureMessage("api_hit: /product_recommendation/")
 		args := ProductRecommendationsBody{}
 		json.Unmarshal([]byte(request.Body), &args)
 		qReq, e := requiredValue(args.Query_request, true)
@@ -113,10 +124,14 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		}
 		query := openai.ProductRecommendationsQuery(qReq, qRes)
 		res, err := openai.TextCompletion(openAIApiKey, query)
+		if err != nil {
+			sentry.CaptureException(err)
+		}
 		return handleUpstreamResponse(res, err)
 	}
 
 	if strings.Contains(request.Path, "/entities") {
+		sentry.CaptureMessage("api_hit: /entities")
 		args := ProductRecommendationsBody{}
 		json.Unmarshal([]byte(request.Body), &args)
 		qReq, e := requiredValue(args.Query_request, true)
@@ -125,19 +140,27 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		}
 		query := openai.EntityExtractionQuery(qReq)
 		res, err := openai.TextCompletion(openAIApiKey, query)
+		if err != nil {
+			sentry.CaptureException(err)
+		}
 		return handleUpstreamResponse(res, err)
 	}
 
 	if strings.Contains(request.Path, "/search") {
+		sentry.CaptureMessage("api_hit: /search?q" + request.QueryStringParameters["q"])
 		q, e := requiredValue(request.QueryStringParameters["q"], true)
 		if e != nil {
 			return e, nil
 		}
 		res, err := search.ProductList(searchApiKey, q)
+		if err != nil {
+			sentry.CaptureException(err)
+		}
 		return handleUpstreamResponse(res, err)
 	}
 
 	if strings.Contains(request.Path, "/ebay_search") {
+		sentry.CaptureMessage("api_hit: /ebay_search?q=" + request.QueryStringParameters["q"])
 		q, e := requiredValue(request.QueryStringParameters["q"], true)
 		if e != nil {
 			return e, nil
@@ -155,6 +178,9 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 		// TODO: cache token
 		t, _ := search.EbayGetAccessToken()
 		res, err := search.EbaySearch(q, marketPlace, nLimit, t.AccessToken, ebayCampaignId)
+		if err != nil {
+			sentry.CaptureException(err)
+		}
 		return handleUpstreamResponse(res, err)
 	}
 
@@ -166,5 +192,20 @@ func handler(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResp
 
 func main() {
 	godotenv.Load()
+	sentryDsn, e := requiredValue(os.Getenv("SENTRY_DSN"), false)
+	if e != nil {
+		log.Fatalf("missing sentry dsn")
+	}
+	environment, e := requiredValue(os.Getenv("ENVIRONMENT"), false)
+	if e != nil {
+		log.Fatalf("missing environment")
+	}
+	sErr := sentry.Init(sentry.ClientOptions{
+		Dsn:         sentryDsn,
+		Environment: environment,
+	})
+	if sErr != nil {
+		log.Fatalf("sentry.Init: %s", sErr)
+	}
 	lambda.Start(handler)
 }
