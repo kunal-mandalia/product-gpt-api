@@ -99,17 +99,8 @@ func handleUpstreamResponse(res interface{}, err error, cachedRes *CachedRespons
 }
 
 // expose textcompletion and search endpoints
-func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration) func(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
+func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration, openAIApiKey string, ebayCampaignId string) func(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	return func(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-		// check api keys are loaded
-		openAIApiKey, e := requiredValue(os.Getenv("OPENAI_API_KEY"), false)
-		if e != nil {
-			return e, nil
-		}
-		ebayCampaignId, e := requiredValue(os.Getenv("EBAY_CAMPAIGN_ID"), false)
-		if e != nil {
-			return e, nil
-		}
 
 		if strings.Contains(request.Path, "/textcompletion") {
 			sentry.CaptureMessage("api_hit: /textcompletion/q=" + request.QueryStringParameters["q"])
@@ -266,6 +257,14 @@ func main() {
 	if e != nil {
 		log.Fatalf("missing environment")
 	}
+	openAIApiKey, e := requiredValue(os.Getenv("OPENAI_API_KEY"), false)
+	if e != nil {
+		log.Fatalf("missing openapi key")
+	}
+	ebayCampaignId, e := requiredValue(os.Getenv("EBAY_CAMPAIGN_ID"), false)
+	if e != nil {
+		log.Fatalf("missing ebay compaign id")
+	}
 	sErr := sentry.Init(sentry.ClientOptions{
 		Dsn:         sentryDsn,
 		Environment: environment,
@@ -288,5 +287,5 @@ func main() {
 	}
 
 	rdb := redis.NewClient(options)
-	lambda.Start(wrappedHandler(rdb, cacheDuration))
+	lambda.Start(wrappedHandler(rdb, cacheDuration, openAIApiKey, ebayCampaignId))
 }
