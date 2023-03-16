@@ -109,42 +109,24 @@ func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration, openAIApiKey
 			cachedValue := cachedCommand.Val()
 			if cachedValue != "" {
 				c := CachedResponse{cacheKey, cachedValue}
-				return handleUpstreamResponse(openai.TextCompletionResponse{}, nil, &c)
+				return handleUpstreamResponse(nil, nil, &c)
 			}
 
 			q, e := requiredValue(request.QueryStringParameters["q"], true)
 			if e != nil {
-				return e, nil
+				return handleUpstreamResponse(nil, errors.New("missing query"), nil)
 			}
 			res, err := openai.TextCompletion(openAIApiKey, q)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 			b, err := json.Marshal(res)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 			rdb.Set(ctx, cacheKey, string(b), cacheDuration)
-			return handleUpstreamResponse(res, err, nil)
-		}
-
-		if strings.Contains(request.Path, "/product_recommendation") {
-			sentry.CaptureMessage("api_hit: /product_recommendation/")
-			args := ProductRecommendationsBody{}
-			json.Unmarshal([]byte(request.Body), &args)
-			qReq, e := requiredValue(args.Query_request, true)
-			if e != nil {
-				return e, nil
-			}
-			qRes, e := requiredValue(args.Query_response, true)
-			if e != nil {
-				return e, nil
-			}
-			query := openai.ProductRecommendationsQuery(qReq, qRes)
-			res, err := openai.TextCompletion(openAIApiKey, query)
-			if err != nil {
-				sentry.CaptureException(err)
-			}
 			return handleUpstreamResponse(res, err, nil)
 		}
 
@@ -154,7 +136,7 @@ func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration, openAIApiKey
 			json.Unmarshal([]byte(request.Body), &args)
 			qReq, e := requiredValue(args.Query_request, true)
 			if e != nil {
-				return e, nil
+				return handleUpstreamResponse(nil, errors.New("missing entities query request"), nil)
 			}
 
 			cacheKey := "/entities?body_query_request=" + qReq
@@ -185,15 +167,15 @@ func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration, openAIApiKey
 
 			q, e := requiredValue(request.QueryStringParameters["q"], true)
 			if e != nil {
-				return e, nil
+				return handleUpstreamResponse(nil, errors.New("missing ebay search query"), nil)
 			}
 			marketPlace, e := requiredValue(request.QueryStringParameters["marketplace"], true)
 			if e != nil {
-				return e, nil
+				return handleUpstreamResponse(nil, errors.New("missing ebay search marketplace"), nil)
 			}
 			limit, e := requiredValue(request.QueryStringParameters["limit"], true)
 			if e != nil {
-				return e, nil
+				return handleUpstreamResponse(nil, errors.New("missing ebay search limit"), nil)
 			}
 			nLimit, _ := strconv.Atoi(limit)
 
