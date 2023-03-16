@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -22,7 +21,6 @@ import (
 
 var ctx = context.Background()
 
-// request structs
 type ProductRecommendationsBody struct {
 	Query_request  string `json:"query_request"`
 	Query_response string `json:"query_response"`
@@ -32,7 +30,17 @@ type CachedResponse struct {
 	Value string
 }
 
+func makeCorsHeaders() map[string]string {
+	headers := make(map[string]string)
+	headers["Access-Control-Allow-Origin"] = "*"
+	headers["Access-Control-Allow-Headers"] = "Content-Type"
+	headers["Access-Control-Allow-Methods"] = "GET, POST"
+	return headers
+}
+
 func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResponse) {
+	headers := makeCorsHeaders()
+
 	if s == "" {
 		statusCode := 0
 		body := ""
@@ -45,6 +53,7 @@ func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResp
 		}
 		return "", &events.APIGatewayProxyResponse{
 			StatusCode: statusCode,
+			Headers:    headers,
 			Body:       body,
 		}
 	}
@@ -52,17 +61,7 @@ func requiredValue(s string, fromUser bool) (string, *events.APIGatewayProxyResp
 }
 
 func handleUpstreamResponse(res interface{}, err error, cachedRes *CachedResponse) (*events.APIGatewayProxyResponse, error) {
-	allowedOrigin, e := requiredValue(os.Getenv("ALLOWED_ORIGIN"), false)
-	fmt.Println("allowed origin", allowedOrigin)
-	if e != nil {
-		sentry.CaptureException(errors.New("missing env allowed origin"))
-		return e, nil
-	}
-
-	headers := make(map[string]string)
-	headers["Access-Control-Allow-Origin"] = allowedOrigin
-	headers["Access-Control-Allow-Headers"] = "Content-Type"
-	headers["Access-Control-Allow-Methods"] = "GET, POST"
+	headers := makeCorsHeaders()
 
 	if err != nil {
 		sentry.CaptureException(err)
@@ -179,10 +178,12 @@ func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration) func(request
 			res, err := openai.TextCompletion(openAIApiKey, query)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 			b, err := json.Marshal(res)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 			rdb.Set(ctx, cacheKey, string(b), cacheDuration)
 			return handleUpstreamResponse(res, err, nil)
@@ -210,34 +211,30 @@ func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration) func(request
 			cachedValue := cachedCommand.Val()
 			if cachedValue != "" {
 				c := CachedResponse{cacheKey, cachedValue}
-				return handleUpstreamResponse(openai.TextCompletionResponse{}, nil, &c)
+				return handleUpstreamResponse(nil, nil, &c)
 			}
 
 			token := GetEbayAccessToken(rdb)
 			if token == "" {
-				return &events.APIGatewayProxyResponse{
-					StatusCode: 500,
-					Body:       "API Auth",
-				}, nil
+				return handleUpstreamResponse(nil, errors.New("no ebay access token"), nil)
 			}
 
 			res, err := search.EbaySearch(q, marketPlace, nLimit, token, ebayCampaignId)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 
 			b, err := json.Marshal(res)
 			if err != nil {
 				sentry.CaptureException(err)
+				return handleUpstreamResponse(nil, err, nil)
 			}
 			rdb.Set(ctx, cacheKey, string(b), cacheDuration)
 			return handleUpstreamResponse(res, err, nil)
 		}
 
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Bad query",
-		}, nil
+		return handleUpstreamResponse(nil, errors.New("bad request"), nil)
 	}
 }
 
