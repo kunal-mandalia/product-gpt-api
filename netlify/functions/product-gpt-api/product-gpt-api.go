@@ -33,8 +33,8 @@ type CachedResponse struct {
 func makeCorsHeaders() map[string]string {
 	headers := make(map[string]string)
 	headers["Access-Control-Allow-Origin"] = "*"
-	headers["Access-Control-Allow-Headers"] = "Content-Type"
-	headers["Access-Control-Allow-Methods"] = "GET, POST"
+	headers["Access-Control-Allow-Headers"] = "*"
+	headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
 	return headers
 }
 
