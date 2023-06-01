@@ -270,5 +270,7 @@ func main() {
 	}
 
 	rdb := redis.NewClient(options)
+	fmt.Println("starting handler...")
 	lambda.Start(wrappedHandler(rdb, cacheDuration, openAIApiKey, ebayCampaignId))
+	fmt.Println("handler started")
 }
