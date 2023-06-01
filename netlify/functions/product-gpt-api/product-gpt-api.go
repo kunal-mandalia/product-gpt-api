@@ -103,12 +103,12 @@ func handleUpstreamResponse(res interface{}, err error, cachedRes *CachedRespons
 func wrappedHandler(rdb *redis.Client, cacheDuration time.Duration, openAIApiKey string, ebayCampaignId string) func(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	return func(request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 		fmt.Println("handler executed")
-		headers := makeCorsHeaders()
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Headers:    headers,
-			Body:       "Always OK",
-		}, nil
+		// headers := makeCorsHeaders()
+		// return &events.APIGatewayProxyResponse{
+		// 	StatusCode: 200,
+		// 	Headers:    headers,
+		// 	Body:       "Always OK",
+		// }, nil
 
 		if strings.Contains(request.Path, "/textcompletion") {
 			sentry.CaptureMessage("api_hit: /textcompletion/q=" + request.QueryStringParameters["q"])
